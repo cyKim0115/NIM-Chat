@@ -99,6 +99,7 @@
             autocomplete="off"
             spellcheck="false"
           />
+          <small>이 기기 브라우저(localStorage)에만 저장됩니다. 서버로 키를 보내지 않습니다.</small>
         </label>
 
         <label class="field">
@@ -148,7 +149,10 @@
             autocomplete="off"
             spellcheck="false"
           />
-          <small>비우면 Worker의 <code>BRAVE_API_KEY</code> 시크릿을 사용합니다.</small>
+          <small
+            >비우면 Worker의 <code>BRAVE_API_KEY</code> 시크릿을 사용합니다. 입력한
+            키는 이 기기에 저장됩니다.</small
+          >
         </label>
 
         <label class="field">
@@ -162,8 +166,9 @@
           ></textarea>
         </label>
 
-        <div class="sheet-actions">
+        <div class="sheet-actions sheet-actions-wrap">
           <button type="button" class="ghost-btn" id="clearChatBtn">대화 지우기</button>
+          <button type="button" class="ghost-btn" id="clearKeysBtn">키 삭제</button>
           <button type="button" class="primary-btn" id="saveSettingsBtn">저장</button>
         </div>
       </form>

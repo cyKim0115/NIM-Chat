@@ -428,6 +428,10 @@ textarea#prompt:focus {
   margin-top: 8px;
 }
 
+.sheet-actions-wrap {
+  flex-wrap: wrap;
+}
+
 .ghost-btn,
 .primary-btn {
   appearance: none;

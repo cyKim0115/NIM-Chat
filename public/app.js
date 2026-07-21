@@ -49,8 +49,8 @@ let messages = [];
 /** @type {AbortController | null} */
 let activeAbort = null;
 
-function loadSettings() {
-  const defaults = {
+function defaultSettings() {
+  return {
     apiKey: "",
     model: CHAT_MODELS[0].id,
     agentModel: DEFAULT_AGENT_MODEL,
@@ -60,6 +60,10 @@ function loadSettings() {
     braveApiKey: "",
     customInstructions: "",
   };
+}
+
+function loadSettings() {
+  const defaults = defaultSettings();
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return defaults;
@@ -69,8 +73,55 @@ function loadSettings() {
   }
 }
 
+/**
+ * Persist settings to this device (localStorage).
+ * @param {ReturnType<typeof defaultSettings>} next
+ * @returns {boolean}
+ */
 function saveSettings(next) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    return true;
+  } catch (err) {
+    console.warn("settings save failed", err);
+    setStatus("이 기기 저장에 실패했습니다. 브라우저 저장소/시크릿 모드를 확인하세요.");
+    return false;
+  }
+}
+
+/**
+ * Read the settings form. Empty secret fields keep the previously stored values
+ * so reopening the sheet and saving cannot wipe keys by accident.
+ */
+function readSettingsFromForm() {
+  const prev = loadSettings();
+  const mode = els.mode.value === "agent" ? "agent" : "chat";
+  const apiKeyInput = els.apiKey.value.trim();
+  const braveInput = els.braveApiKey.value.trim();
+  const next = {
+    ...prev,
+    apiKey: apiKeyInput || prev.apiKey,
+    braveApiKey: braveInput || prev.braveApiKey,
+    mode,
+    proxyUrl: els.proxyUrl.value.trim() || "/api/chat",
+    agentUrl: els.agentUrl.value.trim() || "/api/agent",
+    customInstructions: els.customInstructions.value.slice(0, 2000),
+  };
+  if (mode === "agent") {
+    next.agentModel = els.model.value;
+  } else {
+    next.model = els.model.value;
+  }
+  return next;
+}
+
+function syncSecretPlaceholders(settings) {
+  els.apiKey.placeholder = settings.apiKey
+    ? "이 기기에 저장됨 · 변경 시에만 입력"
+    : "nvapi-...";
+  els.braveApiKey.placeholder = settings.braveApiKey
+    ? "이 기기에 저장됨 · 변경 시에만 입력"
+    : "BSA...";
 }
 
 function modelsForMode(mode) {
@@ -209,12 +260,15 @@ function autoGrow() {
 
 function openSettings() {
   const settings = loadSettings();
-  els.apiKey.value = settings.apiKey;
+  // Keep password fields empty when a key is already stored so browsers don't
+  // fight autofill, and so Save with blank fields preserves the stored key.
+  els.apiKey.value = "";
+  els.braveApiKey.value = "";
+  syncSecretPlaceholders(settings);
   els.mode.value = settings.mode;
   fillModelSelect(settings.mode, activeModel(settings));
   els.proxyUrl.value = settings.proxyUrl;
   els.agentUrl.value = settings.agentUrl;
-  els.braveApiKey.value = settings.braveApiKey;
   els.customInstructions.value = settings.customInstructions;
   els.modelHint.hidden = settings.mode !== "agent";
   els.settingsDialog.showModal();
@@ -542,26 +596,47 @@ els.mode.addEventListener("change", () => {
 });
 
 document.getElementById("saveSettingsBtn").addEventListener("click", () => {
-  const mode = els.mode.value === "agent" ? "agent" : "chat";
-  const settings = loadSettings();
-  const next = {
-    ...settings,
-    apiKey: els.apiKey.value.trim(),
-    mode,
-    proxyUrl: els.proxyUrl.value.trim() || "/api/chat",
-    agentUrl: els.agentUrl.value.trim() || "/api/agent",
-    braveApiKey: els.braveApiKey.value.trim(),
-    customInstructions: els.customInstructions.value.slice(0, 2000),
-  };
-  if (mode === "agent") {
-    next.agentModel = els.model.value;
-  } else {
-    next.model = els.model.value;
-  }
-  saveSettings(next);
+  const next = readSettingsFromForm();
+  if (!saveSettings(next)) return;
   els.settingsDialog.close();
   syncChrome();
+  setStatus(
+    next.apiKey
+      ? "설정을 이 기기에 저장했습니다. 다음에 다시 열어도 키가 유지됩니다."
+      : "설정을 저장했습니다."
+  );
 });
+
+document.getElementById("clearKeysBtn")?.addEventListener("click", () => {
+  const next = {
+    ...loadSettings(),
+    apiKey: "",
+    braveApiKey: "",
+  };
+  if (!saveSettings(next)) return;
+  els.apiKey.value = "";
+  els.braveApiKey.value = "";
+  syncSecretPlaceholders(next);
+  syncChrome();
+  setStatus("저장된 API 키를 이 기기에서 삭제했습니다.");
+});
+
+/** Persist a single secret as soon as the user leaves the field with a value. */
+function persistSecretOnBlur(field, keyName) {
+  field.addEventListener("blur", () => {
+    const value = field.value.trim();
+    if (!value) return;
+    const next = { ...loadSettings(), [keyName]: value };
+    if (saveSettings(next)) {
+      field.value = "";
+      syncSecretPlaceholders(next);
+      syncChrome();
+    }
+  });
+}
+
+persistSecretOnBlur(els.apiKey, "apiKey");
+persistSecretOnBlur(els.braveApiKey, "braveApiKey");
 
 els.clearChatBtn.addEventListener("click", () => {
   messages = [];
@@ -572,3 +647,10 @@ els.clearChatBtn.addEventListener("click", () => {
 
 syncChrome();
 autoGrow();
+{
+  const settings = loadSettings();
+  syncSecretPlaceholders(settings);
+  if (settings.apiKey.trim()) {
+    setStatus("저장된 API 키를 불러왔습니다.");
+  }
+}
