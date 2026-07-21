@@ -17,19 +17,23 @@ function jsonError(message, status = 400) {
   });
 }
 
-export async function onRequestOptions() {
-  return new Response(null, { status: 204, headers: corsHeaders });
-}
+async function handleChat(request) {
+  if (request.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: corsHeaders });
+  }
 
-export async function onRequestPost(context) {
-  const auth = context.request.headers.get("Authorization");
+  if (request.method !== "POST") {
+    return jsonError("Method not allowed", 405);
+  }
+
+  const auth = request.headers.get("Authorization");
   if (!auth || !auth.startsWith("Bearer ")) {
     return jsonError("Authorization Bearer token required", 401);
   }
 
   let body;
   try {
-    body = await context.request.text();
+    body = await request.text();
     JSON.parse(body);
   } catch {
     return jsonError("Invalid JSON body");
@@ -42,7 +46,7 @@ export async function onRequestPost(context) {
       headers: {
         Authorization: auth,
         "Content-Type": "application/json",
-        Accept: context.request.headers.get("Accept") || "text/event-stream",
+        Accept: request.headers.get("Accept") || "text/event-stream",
       },
       body,
     });
@@ -60,3 +64,15 @@ export async function onRequestPost(context) {
     headers,
   });
 }
+
+export default {
+  async fetch(request, env) {
+    const { pathname } = new URL(request.url);
+
+    if (pathname === "/api/chat" || pathname === "/api/chat/") {
+      return handleChat(request);
+    }
+
+    return env.ASSETS.fetch(request);
+  },
+};

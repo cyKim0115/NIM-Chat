@@ -3,13 +3,13 @@
 모바일 우선 NVIDIA NIM 채팅 웹앱입니다.  
 API 키는 브라우저 `localStorage`에만 저장되며, 저장소에 올리지 마세요.
 
-## 왜 Cloudflare Pages인가?
+## 왜 Cloudflare Workers인가?
 
 NVIDIA API(`integrate.api.nvidia.com`)는 브라우저 CORS를 막아 GitHub Pages만으로는 대화가 되지 않습니다.  
-이 프로젝트는 **Cloudflare Pages(무료)** 로 UI와 `/api/chat` 프록시를 함께 배포합니다.
+이 프로젝트는 **Cloudflare Workers(무료) + Static Assets** 로 UI와 `/api/chat` 프록시를 함께 배포합니다.
 
-- 프론트: 정적 HTML/CSS/JS  
-- 프록시: `functions/api/chat.js` (서버에서 NVIDIA로 전달 + CORS 허용)
+- 프론트: 정적 HTML/CSS/JS (`public/`)  
+- 프록시: `src/worker.js` (서버에서 NVIDIA로 전달 + CORS 허용)
 
 GitHub에 푸시한 뒤 Cloudflare가 자동 배포하게 두면 됩니다.
 
@@ -22,12 +22,9 @@ GitHub에 푸시한 뒤 Cloudflare가 자동 배포하게 두면 됩니다.
 ## 배포 (권장: GitHub 연동)
 
 1. 이 폴더를 GitHub 저장소로 푸시합니다.
-2. Cloudflare Dashboard → **Workers & Pages** → **Create** → **Pages** → Git 저장소 연결
-3. 빌드 설정:
-   - Framework preset: **None**
-   - Build command: (비움)
-   - Build output directory: `/` 또는 `.`
-4. Deploy 후 `https://<프로젝트>.pages.dev` 접속
+2. Cloudflare Dashboard → **Workers & Pages** → **Create** → Git 저장소 연결 (Worker)
+3. 배포 명령이 `npx wrangler versions upload` 또는 `npx wrangler deploy` 인지 확인합니다.
+4. Deploy 후 Worker URL 접속
 5. 앱에서 설정 → API 키 입력 → 저장
 
 프록시 URL 기본값은 `/api/chat` 이라 그대로 두면 됩니다.
