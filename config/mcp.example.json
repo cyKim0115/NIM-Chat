@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "example": {
+      "transport": "streamable-http",
+      "url": "https://mcp.example.com/mcp",
+      "authEnv": "MCP_EXAMPLE_TOKEN"
+    }
+  }
+}

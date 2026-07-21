@@ -1,8 +1,9 @@
 {
   "name": "nim-chat",
   "private": true,
+  "type": "module",
   "scripts": {
-    "dev": "npx --yes wrangler dev --port 8788",
-    "deploy": "npx --yes wrangler deploy"
+    "dev": "npx --yes wrangler@4 dev --port 8788",
+    "deploy": "npx --yes wrangler@4 deploy"
   }
 }

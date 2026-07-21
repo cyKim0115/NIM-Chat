@@ -1,0 +1,18 @@
+{
+  "preamble": "You are NIM Chat Agent. Use tools when they improve accuracy. Prefer web_search for current facts. Keep answers concise unless the user asks for detail.",
+  "maxSteps": 8,
+  "maxToolResultChars": 8000,
+  "maxMcpServers": 3,
+  "defaultAgentModel": "meta/llama-3.1-70b-instruct",
+  "toolModels": [
+    "meta/llama-3.1-70b-instruct",
+    "meta/llama-3.3-70b-instruct",
+    "meta/llama-3.1-8b-instruct",
+    "nvidia/llama-3.1-nemotron-70b-instruct",
+    "mistralai/mistral-7b-instruct-v0.3"
+  ],
+  "searchProvider": "brave",
+  "temperature": 0.7,
+  "top_p": 0.9,
+  "max_tokens": 2048
+}

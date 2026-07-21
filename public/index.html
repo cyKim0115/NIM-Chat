@@ -25,22 +25,32 @@
           <p class="brand">NIM Chat</p>
           <p class="model-label" id="modelLabel">모델 선택</p>
         </div>
-        <button type="button" class="icon-btn" id="settingsBtn" aria-label="설정">
-          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
-            <path
-              fill="currentColor"
-              d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm9.4 3.1-.9-.5a7.7 7.7 0 0 0 .1-1.2l.9-.6a.8.8 0 0 0 .2-1l-1.1-1.9a.8.8 0 0 0-1-.3l-1 .4a7.6 7.6 0 0 0-1-.6l-.2-1.1a.8.8 0 0 0-.8-.6h-2.2a.8.8 0 0 0-.8.6l-.2 1.1c-.35.14-.68.32-1 .52l-1-.4a.8.8 0 0 0-1 .3L8.3 7.3a.8.8 0 0 0 .2 1l.9.6c0 .4 0 .8.1 1.2l-.9.5a.8.8 0 0 0-.3 1l.6 2a.8.8 0 0 0 1 .5l1-.3c.3.2.64.4 1 .5l.2 1.1a.8.8 0 0 0 .8.6h2.2a.8.8 0 0 0 .8-.6l.2-1.1c.36-.14.7-.32 1-.52l1 .3a.8.8 0 0 0 1-.5l.6-2a.8.8 0 0 0-.3-1Z"
-            />
-          </svg>
-        </button>
+        <div class="topbar-actions">
+          <div class="mode-toggle" role="group" aria-label="모드">
+            <button type="button" class="mode-btn" data-mode="chat" id="modeChat">
+              채팅
+            </button>
+            <button type="button" class="mode-btn" data-mode="agent" id="modeAgent">
+              에이전트
+            </button>
+          </div>
+          <button type="button" class="icon-btn" id="settingsBtn" aria-label="설정">
+            <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+              <path
+                fill="currentColor"
+                d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm9.4 3.1-.9-.5a7.7 7.7 0 0 0 .1-1.2l.9-.6a.8.8 0 0 0 .2-1l-1.1-1.9a.8.8 0 0 0-1-.3l-1 .4a7.6 7.6 0 0 0-1-.6l-.2-1.1a.8.8 0 0 0-.8-.6h-2.2a.8.8 0 0 0-.8.6l-.2 1.1c-.35.14-.68.32-1 .52l-1-.4a.8.8 0 0 0-1 .3L8.3 7.3a.8.8 0 0 0 .2 1l.9.6c0 .4 0 .8.1 1.2l-.9.5a.8.8 0 0 0-.3 1l.6 2a.8.8 0 0 0 1 .5l1-.3c.3.2.64.4 1 .5l.2 1.1a.8.8 0 0 0 .8.6h2.2a.8.8 0 0 0 .8-.6l.2-1.1c.36-.14.7-.32 1-.52l1 .3a.8.8 0 0 0 1-.5l.6-2a.8.8 0 0 0-.3-1Z"
+              />
+            </svg>
+          </button>
+        </div>
       </header>
 
       <main class="transcript" id="transcript" aria-live="polite">
         <section class="empty" id="emptyState">
           <h1 class="empty-brand">NIM Chat</h1>
           <p class="empty-copy">
-            NVIDIA 무료 API로 모바일에서 바로 대화하세요. 키는 이 기기에만
-            저장됩니다.
+            NVIDIA 무료 API로 모바일에서 바로 대화하세요. 에이전트 모드에서는
+            웹검색·스킬·MCP 도구를 사용할 수 있습니다.
           </p>
           <button type="button" class="ghost-btn" id="openSettingsFromEmpty">
             API 키 설정
@@ -92,12 +102,21 @@
         </label>
 
         <label class="field">
-          <span>모델</span>
-          <select id="model" name="model"></select>
+          <span>모드</span>
+          <select id="mode" name="mode">
+            <option value="chat">채팅</option>
+            <option value="agent">에이전트</option>
+          </select>
         </label>
 
         <label class="field">
-          <span>프록시 URL</span>
+          <span>모델</span>
+          <select id="model" name="model"></select>
+          <small id="modelHint">에이전트 모드는 도구 지원 모델만 선택할 수 있습니다.</small>
+        </label>
+
+        <label class="field">
+          <span>프록시 URL (채팅)</span>
           <input
             type="url"
             id="proxyUrl"
@@ -105,7 +124,42 @@
             placeholder="/api/chat"
             spellcheck="false"
           />
-          <small>Cloudflare Pages 기본값은 <code>/api/chat</code> 입니다.</small>
+          <small>기본값 <code>/api/chat</code>. 에이전트는 <code>/api/agent</code>를 사용합니다.</small>
+        </label>
+
+        <label class="field">
+          <span>에이전트 URL</span>
+          <input
+            type="url"
+            id="agentUrl"
+            name="agentUrl"
+            placeholder="/api/agent"
+            spellcheck="false"
+          />
+        </label>
+
+        <label class="field">
+          <span>Brave Search API 키 (선택)</span>
+          <input
+            type="password"
+            id="braveApiKey"
+            name="braveApiKey"
+            placeholder="BSA..."
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <small>비우면 Worker의 <code>BRAVE_API_KEY</code> 시크릿을 사용합니다.</small>
+        </label>
+
+        <label class="field">
+          <span>Custom instructions</span>
+          <textarea
+            id="customInstructions"
+            name="customInstructions"
+            rows="3"
+            placeholder="에이전트에 추가로 전달할 짧은 지시 (최대 ~2000자)"
+            spellcheck="true"
+          ></textarea>
         </label>
 
         <div class="sheet-actions">

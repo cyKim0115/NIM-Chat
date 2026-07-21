@@ -83,6 +83,37 @@ body::before {
   font-size: 0.78rem;
 }
 
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mode-toggle {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.mode-btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.mode-btn.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
 .icon-btn {
   appearance: none;
   border: 1px solid var(--line);
@@ -170,6 +201,69 @@ body::before {
   border: 1px solid rgba(224, 122, 106, 0.35);
   color: #ffcfc7;
   font-size: 0.92rem;
+}
+
+.tool-card {
+  align-self: stretch;
+  max-width: 100%;
+  border-radius: 14px;
+  border: 1px solid rgba(212, 162, 90, 0.28);
+  background: rgba(212, 162, 90, 0.08);
+  padding: 8px 12px;
+  animation: rise 0.28s ease both;
+}
+
+.tool-card summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.tool-card summary::-webkit-details-marker {
+  display: none;
+}
+
+.tool-name {
+  color: var(--accent);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+}
+
+.tool-state {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+
+.tool-body {
+  margin: 8px 0 2px;
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 220px;
+  overflow: auto;
+}
+
+.field textarea {
+  width: 100%;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--ink);
+  padding: 12px 14px;
+  font: inherit;
+  resize: vertical;
+  min-height: 72px;
 }
 
 .composer {
