@@ -39,13 +39,18 @@ npx wrangler secret put BRAVE_API_KEY
 
 헤더의 **에이전트** 토글 또는 설정에서 모드를 바꿉니다.
 
+에이전트는 **두 단계**로 답합니다.
+
+1. **계획 (1/2)** — 질문에 바로 답하지 않고, 어떤 도구를 쓸지·어떻게 답할지 계획만 세웁니다.
+2. **실행 (2/2)** — 그 계획에 따라 도구를 호출하고 최종 답변을 작성합니다.
+
 | 기능 | 설명 |
 |------|------|
 | 규칙 | `rules/*.md` 를 파일명 순으로 시스템 프롬프트에 주입 |
 | 스킬 | `skills/*/SKILL.md` — 키워드 또는 `@skill web-search` 로 매칭 |
 | 웹검색 | builtin `web_search` (Brave) + `fetch_url` |
 | MCP | `config/mcp.json` 의 Streamable HTTP 서버 (최대 3개) |
-| 상한 | 최대 8 tool steps, tool 결과 8k chars |
+| 상한 | 실행 단계 최대 8 tool steps, tool 결과 8k chars |
 
 에이전트 기본 모델: `meta/llama-3.1-70b-instruct` (도구 지원 모델만 허용).
 

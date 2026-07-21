@@ -213,6 +213,15 @@ body::before {
   animation: rise 0.28s ease both;
 }
 
+.plan-card {
+  border-color: rgba(155, 176, 165, 0.45);
+  background: rgba(155, 176, 165, 0.1);
+}
+
+.plan-card .tool-name {
+  color: #b8d4c4;
+}
+
 .tool-card summary {
   list-style: none;
   cursor: pointer;

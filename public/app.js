@@ -285,6 +285,27 @@ function appendToolCard(name, args, id) {
 }
 
 /**
+ * @param {string} display
+ */
+function appendPlanCard(display) {
+  hideEmpty();
+  const node = document.createElement("details");
+  node.className = "tool-card plan-card";
+  node.open = true;
+  const summary = document.createElement("summary");
+  summary.innerHTML =
+    `<span class="tool-name">1/2 계획</span><span class="tool-state">완료</span>`;
+  const pre = document.createElement("pre");
+  pre.className = "tool-body";
+  pre.textContent = display || "(계획 없음)";
+  node.appendChild(summary);
+  node.appendChild(pre);
+  els.transcript.appendChild(node);
+  els.transcript.scrollTop = els.transcript.scrollHeight;
+  return node;
+}
+
+/**
  * @param {HTMLElement} card
  * @param {string} result
  */
@@ -545,6 +566,10 @@ async function streamAgent(userText) {
       (event, data) => {
         if (event === "status" && data?.message) {
           setStatus(data.message);
+        } else if (event === "phase" && data?.message) {
+          setStatus(data.message);
+        } else if (event === "plan") {
+          appendPlanCard(data.display || data.raw || JSON.stringify(data.plan || {}, null, 2));
         } else if (event === "text" && data?.delta) {
           full += data.delta;
           assistantNode.textContent = full;

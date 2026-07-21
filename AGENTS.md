@@ -20,7 +20,9 @@
 ```
 Browser (public/)
   ├─ 채팅 모드 → POST /api/chat  → Worker → integrate.api.nvidia.com
-  └─ 에이전트  → POST /api/agent → Worker agent loop
+  └─ 에이전트  → POST /api/agent → Worker **2단계** agent loop
+                    ├─ 1/2 계획: 답변 금지, 도구·접근 방식만 JSON 계획 (도구 미호출)
+                    ├─ 2/2 실행: 계획 따라 tools → 최종 답변
                     ├─ rules/ + skills/ 시스템 프롬프트
                     ├─ builtin: web_search (Brave), fetch_url
                     └─ MCP Streamable HTTP (config/mcp.json)
@@ -29,6 +31,7 @@ Browser (public/)
 - **에이전트 루프는 Worker에서만** 돈다. 시크릿(Brave/MCP)은 브라우저에 두지 않는 것이 원칙(BYOK는 설정으로 예외).
 - Durable Objects / Cloudflare Agents SDK **미사용** (의도적).
 - MCP는 **stdio 불가** — Streamable HTTP만. SDK 대신 Worker-safe 경량 JSON-RPC 클라이언트 (`src/agent/tools/mcp.js`).
+- 에이전트 SSE: `phase` / `plan` / `status` / `tool_*` / `text` / `error` / `done`
 
 ## 주요 경로
 
@@ -37,8 +40,8 @@ Browser (public/)
 | `public/app.js` | UI, localStorage 설정, 채팅 SSE, 에이전트 SSE 이벤트 렌더, `NIMU_SYSTEM_PROMPT` / `buildChatSystemPrompt` |
 | `public/index.html` / `styles.css` | 모바일 UI, 모드 토글, 설정 시트 |
 | `src/worker.js` | `/api/chat`, `/api/agent` 라우팅 |
-| `src/agent/loop.js` | tool-calling 루프 (MAX_STEPS=8) |
-| `src/agent/prompts.js` | 규칙·스킬·날짜·custom instructions 조립 |
+| `src/agent/loop.js` | **2단계** 에이전트: 계획(무도구) → 실행(툴 루프+답변) |
+| `src/agent/prompts.js` | 규칙·스킬·날짜·계획/실행 프롬프트·plan JSON 파서 |
 | `src/agent/tools/*` | builtin + MCP + registry |
 | `src/lib/nim.js`, `sse.js` | NIM 클라이언트, SSE 헬퍼 |
 | `rules/*.md` | 에이전트 규칙 계층 (파일명 정렬 주입) |
@@ -79,8 +82,8 @@ Browser (public/)
 
 ## API / SSE (에이전트)
 
-이벤트: `status` | `text` | `tool_start` | `tool_result` | `error` | `done`  
-도구 턴은 비스트리밍 NIM 호출, 최종 답은 text 이벤트로 전달.
+이벤트: `phase` | `plan` | `status` | `text` | `tool_start` | `tool_result` | `error` | `done`  
+1/2 계획은 `plan` 이벤트로 UI에 표시. 2/2에서만 도구·최종 `text` 답변.
 
 ## 시크릿 (Wrangler)
 

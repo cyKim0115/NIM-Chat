@@ -6,6 +6,7 @@ alwaysApply: true
 # NIM-Chat (니무)
 
 - 모바일 NVIDIA NIM 채팅 앱. Worker(`src/worker.js`) + static(`public/`).
+- 에이전트는 **2단계**(계획→실행). 계획 단계에서는 답·도구 호출 금지.
 - AI 이름 **니무**: 한국어·존댓말. 채팅 프롬프트는 `public/app.js`의 `buildChatSystemPrompt`, 에이전트는 `rules/*` + `src/agent/prompts.js`.
 - 채팅: `POST /api/chat`. 에이전트: `POST /api/agent` (Worker 툴 루프, Brave/MCP). stdio MCP·Durable Objects 없음.
 - 설정은 `localStorage` (`nvidia-chat-settings-v1`). 빈 키 필드로 저장해도 기존 키 유지.
