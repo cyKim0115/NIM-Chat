@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#0f1a17" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>NIM Chat</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,500;6..72,600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="topbar">
+        <div class="brand-block">
+          <p class="brand">NIM Chat</p>
+          <p class="model-label" id="modelLabel">모델 선택</p>
+        </div>
+        <button type="button" class="icon-btn" id="settingsBtn" aria-label="설정">
+          <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+            <path
+              fill="currentColor"
+              d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Zm9.4 3.1-.9-.5a7.7 7.7 0 0 0 .1-1.2l.9-.6a.8.8 0 0 0 .2-1l-1.1-1.9a.8.8 0 0 0-1-.3l-1 .4a7.6 7.6 0 0 0-1-.6l-.2-1.1a.8.8 0 0 0-.8-.6h-2.2a.8.8 0 0 0-.8.6l-.2 1.1c-.35.14-.68.32-1 .52l-1-.4a.8.8 0 0 0-1 .3L8.3 7.3a.8.8 0 0 0 .2 1l.9.6c0 .4 0 .8.1 1.2l-.9.5a.8.8 0 0 0-.3 1l.6 2a.8.8 0 0 0 1 .5l1-.3c.3.2.64.4 1 .5l.2 1.1a.8.8 0 0 0 .8.6h2.2a.8.8 0 0 0 .8-.6l.2-1.1c.36-.14.7-.32 1-.52l1 .3a.8.8 0 0 0 1-.5l.6-2a.8.8 0 0 0-.3-1Z"
+            />
+          </svg>
+        </button>
+      </header>
+
+      <main class="transcript" id="transcript" aria-live="polite">
+        <section class="empty" id="emptyState">
+          <h1 class="empty-brand">NIM Chat</h1>
+          <p class="empty-copy">
+            NVIDIA 무료 API로 모바일에서 바로 대화하세요. 키는 이 기기에만
+            저장됩니다.
+          </p>
+          <button type="button" class="ghost-btn" id="openSettingsFromEmpty">
+            API 키 설정
+          </button>
+        </section>
+      </main>
+
+      <footer class="composer">
+        <form id="chatForm" class="composer-form">
+          <textarea
+            id="prompt"
+            rows="1"
+            placeholder="메시지를 입력하세요"
+            enterkeyhint="send"
+            autocomplete="off"
+          ></textarea>
+          <button type="submit" class="send-btn" id="sendBtn" aria-label="보내기">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+              <path fill="currentColor" d="M3.4 20.6 21 12 3.4 3.4l-.1 6.7L14 12 3.3 13.9z" />
+            </svg>
+          </button>
+          <button type="button" class="send-btn stop" id="stopBtn" hidden aria-label="중지">
+            <span class="stop-square"></span>
+          </button>
+        </form>
+        <p class="status" id="status" role="status"></p>
+      </footer>
+    </div>
+
+    <dialog class="sheet" id="settingsDialog">
+      <form method="dialog" class="sheet-panel" id="settingsForm">
+        <header class="sheet-head">
+          <h2>설정</h2>
+          <button type="submit" class="icon-btn" value="cancel" aria-label="닫기">
+            ✕
+          </button>
+        </header>
+
+        <label class="field">
+          <span>NVIDIA API 키</span>
+          <input
+            type="password"
+            id="apiKey"
+            name="apiKey"
+            placeholder="nvapi-..."
+            autocomplete="off"
+            spellcheck="false"
+          />
+        </label>
+
+        <label class="field">
+          <span>모델</span>
+          <select id="model" name="model"></select>
+        </label>
+
+        <label class="field">
+          <span>프록시 URL</span>
+          <input
+            type="url"
+            id="proxyUrl"
+            name="proxyUrl"
+            placeholder="/api/chat"
+            spellcheck="false"
+          />
+          <small>Cloudflare Pages 기본값은 <code>/api/chat</code> 입니다.</small>
+        </label>
+
+        <div class="sheet-actions">
+          <button type="button" class="ghost-btn" id="clearChatBtn">대화 지우기</button>
+          <button type="button" class="primary-btn" id="saveSettingsBtn">저장</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

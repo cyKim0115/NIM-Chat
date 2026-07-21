@@ -1,0 +1,8 @@
+{
+  "name": "nvidia-chat",
+  "private": true,
+  "scripts": {
+    "dev": "npx --yes wrangler pages dev . --port 8788",
+    "deploy": "npx --yes wrangler pages deploy . --project-name nvidia-chat"
+  }
+}
