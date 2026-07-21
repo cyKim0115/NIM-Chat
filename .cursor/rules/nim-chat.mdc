@@ -1,0 +1,14 @@
+---
+description: NIM-Chat / 니무 프로젝트 핵심 맥락. 아키텍처·페르소나·커밋 관례.
+alwaysApply: true
+---
+
+# NIM-Chat (니무)
+
+- 모바일 NVIDIA NIM 채팅 앱. Worker(`src/worker.js`) + static(`public/`).
+- AI 이름 **니무**: 한국어·존댓말. 채팅 프롬프트는 `public/app.js`의 `buildChatSystemPrompt`, 에이전트는 `rules/*` + `src/agent/prompts.js`.
+- 채팅: `POST /api/chat`. 에이전트: `POST /api/agent` (Worker 툴 루프, Brave/MCP). stdio MCP·Durable Objects 없음.
+- 설정은 `localStorage` (`nvidia-chat-settings-v1`). 빈 키 필드로 저장해도 기존 키 유지.
+- rules/skills MD 추가·변경 시 `src/agent/bundled-content.js` import도 갱신. `wrangler.toml` Text 규칙 유지.
+- 커밋 메시지는 한국어. 사용자가 요청할 때만 커밋/푸시.
+- 상세 인수인계: 루트 `AGENTS.md`.
