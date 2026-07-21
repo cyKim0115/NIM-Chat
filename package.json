@@ -1,5 +1,5 @@
 {
-  "name": "nvidia-chat",
+  "name": "nim-chat",
   "private": true,
   "scripts": {
     "dev": "npx --yes wrangler dev --port 8788",
