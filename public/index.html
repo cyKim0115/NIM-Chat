@@ -49,7 +49,7 @@
         <section class="empty" id="emptyState">
           <h1 class="empty-brand">니무</h1>
           <p class="empty-copy">
-            안녕하세요, 니무입니다. NVIDIA API로 대화할 수 있어요. 키는 이
+            안녕하세요, 니무입니다. 선택한 LLM 제공자로 대화할 수 있어요. 키는 이
             기기에만 저장됩니다.
           </p>
           <button type="button" class="ghost-btn" id="openSettingsFromEmpty">
@@ -76,6 +76,12 @@
             <span class="stop-square"></span>
           </button>
         </form>
+        <div class="typing-indicator" id="typingIndicator" hidden aria-live="polite">
+          <span class="typing-dots" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </span>
+          <span class="typing-label">니무가 응답 중입니다…</span>
+        </div>
         <p class="status" id="status" role="status"></p>
       </footer>
     </div>
@@ -90,17 +96,129 @@
         </header>
 
         <label class="field">
-          <span>NVIDIA API 키</span>
-          <input
-            type="password"
-            id="apiKey"
-            name="apiKey"
-            placeholder="nvapi-..."
-            autocomplete="off"
-            spellcheck="false"
-          />
-          <small>이 기기 브라우저(localStorage)에만 저장됩니다. 서버로 키를 보내지 않습니다.</small>
+          <span>제공자 (Provider)</span>
+          <select id="provider" name="provider">
+            <option value="nim">NVIDIA NIM</option>
+            <option value="openai">OpenAI</option>
+            <option value="deepseek">DeepSeek</option>
+            <option value="openrouter">OpenRouter</option>
+            <option value="local">로컬 (Ollama / LM Studio 등)</option>
+          </select>
+          <small>선택한 제공자의 설정만 표시·사용됩니다.</small>
         </label>
+
+        <fieldset class="provider-group" id="nimGroup" data-provider="nim">
+          <legend>NVIDIA NIM</legend>
+          <label class="field">
+            <span>NIM API 키</span>
+            <input
+              type="password"
+              id="nimApiKey"
+              name="nimApiKey"
+              placeholder="nvapi-..."
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <small id="nimApiKeyStatus" class="field-status"></small>
+          </label>
+        </fieldset>
+
+        <fieldset class="provider-group" id="openaiGroup" data-provider="openai" hidden>
+          <legend>OpenAI</legend>
+          <label class="field">
+            <span>OpenAI API 키</span>
+            <input
+              type="password"
+              id="openaiApiKey"
+              name="openaiApiKey"
+              placeholder="sk-..."
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <small id="openaiApiKeyStatus" class="field-status"></small>
+          </label>
+          <label class="field">
+            <span>OpenAI Base URL</span>
+            <input
+              type="text"
+              id="openaiBaseUrl"
+              name="openaiBaseUrl"
+              placeholder="https://api.openai.com/v1"
+              autocomplete="off"
+              spellcheck="false"
+            />
+          </label>
+        </fieldset>
+
+        <fieldset class="provider-group" id="deepseekGroup" data-provider="deepseek" hidden>
+          <legend>DeepSeek</legend>
+          <label class="field">
+            <span>DeepSeek API 키</span>
+            <input
+              type="password"
+              id="deepseekApiKey"
+              name="deepseekApiKey"
+              placeholder="sk-..."
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <small id="deepseekApiKeyStatus" class="field-status"></small>
+          </label>
+          <label class="field">
+            <span>DeepSeek Base URL</span>
+            <input
+              type="text"
+              id="deepseekBaseUrl"
+              name="deepseekBaseUrl"
+              placeholder="https://api.deepseek.com/v1"
+              autocomplete="off"
+              spellcheck="false"
+            />
+          </label>
+        </fieldset>
+
+        <fieldset class="provider-group" id="openrouterGroup" data-provider="openrouter" hidden>
+          <legend>OpenRouter</legend>
+          <label class="field">
+            <span>OpenRouter API 키</span>
+            <input
+              type="password"
+              id="openrouterApiKey"
+              name="openrouterApiKey"
+              placeholder="sk-or-..."
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <small id="openrouterApiKeyStatus" class="field-status"></small>
+          </label>
+          <label class="field">
+            <span>OpenRouter Base URL</span>
+            <input
+              type="text"
+              id="openrouterBaseUrl"
+              name="openrouterBaseUrl"
+              placeholder="https://openrouter.ai/api/v1"
+              autocomplete="off"
+              spellcheck="false"
+            />
+          </label>
+        </fieldset>
+
+        <fieldset class="provider-group" id="localGroup" data-provider="local" hidden>
+          <legend>로컬 (Ollama / LM Studio 등)</legend>
+          <label class="field">
+            <span>로컬 Base URL</span>
+            <input
+              type="text"
+              id="localBaseUrl"
+              name="localBaseUrl"
+              placeholder="http://127.0.0.1:11434/v1"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <small>API 키는 보통 필요 없습니다. 로컬 서버가 켜져 있어야 합니다.</small>
+          </label>
+        </fieldset>
 
         <label class="field">
           <span>모드</span>

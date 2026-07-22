@@ -4,7 +4,7 @@
 
 ## 한 줄 요약
 
-모바일 우선 **NVIDIA NIM** 채팅 웹앱. Cloudflare Worker가 CORS 프록시 + 에이전트 툴 루프를 담당하고, UI는 vanilla JS(`public/`). AI 페르소나 이름은 **니무**.
+모바일 우선 **멀티 LLM** 채팅 웹앱(기본 NVIDIA NIM). Cloudflare Worker가 CORS 프록시 + 에이전트 툴 루프를 담당하고, UI는 vanilla JS(`public/`). AI 페르소나 이름은 **니무**.
 
 ## 제품·브랜드
 
@@ -19,10 +19,11 @@
 
 ```
 Browser (public/)
-  ├─ 채팅 모드 → POST /api/chat  → Worker → integrate.api.nvidia.com
+  ├─ 채팅 모드 → POST /api/chat  → Worker → (NIM | OpenAI | DeepSeek | OpenRouter | 로컬)
+  ├─ polish    → POST /api/polish → Worker → 동일 업스트림 (필요 시만)
   └─ 에이전트  → POST /api/agent → Worker **2단계** agent loop
                     ├─ 1/2 계획: 답변 금지, 도구·접근 방식만 JSON 계획 (도구 미호출)
-                    ├─ 2/2 실행: 계획 따라 tools → 최종 답변
+                    ├─ 2/2 실행: 계획 따라 tools → 최종 답변 (+ polish)
                     ├─ rules/ + skills/ 시스템 프롬프트
                     ├─ builtin: web_search (Brave), fetch_url
                     └─ MCP Streamable HTTP (config/mcp.json)
@@ -31,32 +32,42 @@ Browser (public/)
 - **에이전트 루프는 Worker에서만** 돈다. 시크릿(Brave/MCP)은 브라우저에 두지 않는 것이 원칙(BYOK는 설정으로 예외).
 - Durable Objects / Cloudflare Agents SDK **미사용** (의도적).
 - MCP는 **stdio 불가** — Streamable HTTP만. SDK 대신 Worker-safe 경량 JSON-RPC 클라이언트 (`src/agent/tools/mcp.js`).
-- 에이전트 SSE: `phase` / `plan` / `status` / `tool_*` / `text` / `error` / `done`
+- 에이전트 SSE: `phase` / `plan` / `status` / `tool_*` / `text` / `error` / `done` (`phase: polish` 포함)
 
 ## 주요 경로
 
 | 경로 | 역할 |
 |------|------|
-| `public/app.js` | UI, localStorage 설정, 채팅 SSE, 에이전트 SSE 이벤트 렌더, `NIMU_SYSTEM_PROMPT` / `buildChatSystemPrompt` |
-| `public/index.html` / `styles.css` | 모바일 UI, 모드 토글, 설정 시트 |
-| `src/worker.js` | `/api/chat`, `/api/agent` 라우팅 |
-| `src/agent/loop.js` | **2단계** 에이전트: 계획(무도구) → 실행(툴 루프+답변) |
+| `public/app.js` | UI, 멀티 제공자 설정, 채팅 SSE, 에이전트 SSE, 채팅 post-polish, typing indicator |
+| `public/index.html` / `styles.css` | 모바일 UI, 모드 토글, 제공자 설정 시트 |
+| `src/worker.js` | `/api/chat`, `/api/agent`, `/api/polish` 라우팅 |
+| `src/agent/loop.js` | **2단계** 에이전트 + 순차 tool call + 최종 답 polish |
 | `src/agent/prompts.js` | 규칙·스킬·날짜·계획/실행 프롬프트·plan JSON 파서 |
 | `src/agent/tools/*` | builtin + MCP + registry |
-| `src/lib/nim.js`, `sse.js` | NIM 클라이언트, SSE 헬퍼 |
+| `src/lib/nim.js` | `resolveChatEndpoint`, OpenAI 호환 chat client |
+| `src/lib/text-guard.js` | 의도되지 않은 외국 문자 감지·polish |
+| `src/lib/sse.js` | SSE 헬퍼 |
 | `rules/*.md` | 에이전트 규칙 계층 (파일명 정렬 주입) |
 | `skills/*/SKILL.md` | 키워드 / `@skill name` 매칭 |
-| `config/agent.json` | maxSteps, toolModels, preamble |
+| `config/agent.json` | maxSteps, toolModels, preamble, polishReply |
 | `config/mcp.json` | 원격 MCP (시크릿 없이 URL + authEnv) |
 | `wrangler.toml` | Worker + assets; `**/*.md` Text 모듈 규칙 |
 
 ## 설정·저장 (브라우저)
 
 - localStorage 키: `nvidia-chat-settings-v1`
-- 저장: NVIDIA API 키, Brave 키(선택), 모드, 모델, custom instructions, URL들
+- 스키마: `{ provider, providers: { nim|openai|deepseek|openrouter|local: { apiKey, model, agentModel, baseUrl? } }, mode, proxyUrl, agentUrl, braveApiKey, customInstructions }`
+- 구 flat `{ apiKey, model, agentModel }`는 `loadSettings()`가 자동 마이그레이션
 - **빈 password 필드로 저장해도 기존 키를 지우지 않음** (실수 방지)
 - 키 입력 후 blur 시에도 즉시 persist
 - 대화 히스토리는 **메모리만** — 새로고침 시 사라짐
+
+## LLM 제공자
+
+- 설정에 제공자 셀렉터. 제공자별 키·모델·Base URL 저장.
+- 요청 헤더: `Authorization: Bearer …`, 커스텀 제공자는 `X-Api-Base` (Worker가 `resolveChatEndpoint`로 정규화).
+- 로컬(Ollama 등): 키 불필요, Base URL 기본 `http://127.0.0.1:11434/v1`. Cloudflare 배포본에서는 localhost 불가.
+- `toolModels` 게이트는 **NIM 기본 경로(X-Api-Base 없음)에서만** 적용.
 
 ## 프롬프트 계층
 
@@ -76,14 +87,21 @@ Browser (public/)
 
 ## 모델
 
-- 채팅: Llama 8B, Nemotron 70B, Gemma, Mistral, Phi-3, DeepSeek R1 distill 등
-- 에이전트: `config/agent.json`의 `toolModels`만 허용. 기본 `meta/llama-3.1-70b-instruct`
-- 도구 미지원 모델(Gemma 등)은 에이전트에서 게이트로 거부
+- NIM 채팅: Llama 8B, Nemotron 70B, Gemma, Mistral, Phi-3, DeepSeek R1 distill 등
+- NIM 에이전트: `config/agent.json`의 `toolModels`만 허용. 기본 `meta/llama-3.1-70b-instruct`
+- 기타 제공자: 제공자별 모델 목록(게이트 없음)
+- 도구 호출: `parallel_tool_calls: false`, 여러 tool call이 오면 1개씩 순차 실행
+
+## 답변 polish
+
+- `config/agent.json` `polishReply: true`
+- 에이전트: 최종 답 emit 전 Worker 내 `text-guard` (`phase: polish`)
+- 채팅: 스트림 완료 후 클라이언트가 스크립트 검사 → 이슈 있으면 `POST /api/polish`로 교정 후 버블 교체
 
 ## API / SSE (에이전트)
 
 이벤트: `phase` | `plan` | `status` | `text` | `tool_start` | `tool_result` | `error` | `done`  
-1/2 계획은 `plan` 이벤트로 UI에 표시. 2/2에서만 도구·최종 `text` 답변.
+1/2 계획은 `plan` 이벤트로 UI에 표시. 2/2에서만 도구·최종 `text` 답변. polish 시 `phase: "polish"`.
 
 ## 시크릿 (Wrangler)
 
@@ -115,6 +133,7 @@ Worker 이름: `nim-chat` (`wrangler.toml`).
 2. API 키 localStorage 유지 UX 강화 (빈 저장 시 보존, blur persist, 키 삭제)
 3. 페르소나 **니무** + 존댓말·한국어 기본 프롬프트
 4. 일반 웹 LLM 수준으로 규칙 보강 (응답 형식, 안전, 날짜, custom instructions 우선순위)
+5. Nimu-TRPG에서 이식: 멀티 제공자, 외국 문자 polish, 순차 tool call, 응답 대기 인디케이터
 
 ## 다음에 손대기 좋은 곳
 
@@ -127,5 +146,6 @@ Worker 이름: `nim-chat` (`wrangler.toml`).
 
 - `wrangler.toml`의 `[[rules]] type = "Text" globs = ["**/*.md"]` — 없으면 rules/skills import 실패
 - `bundled-content.js`와 `rules/`/`skills/` 파일 목록 불일치
-- `/api/agent` CORS 헤더에 `X-Brave-Api-Key` 포함 여부
-- localStorage 스키마: `apiKey` / `agentModel` / `mode` / `braveApiKey` / `customInstructions`
+- `/api/*` CORS 헤더에 `X-Brave-Api-Key`, `X-Api-Base` 포함 여부
+- localStorage 스키마: `provider` / `providers.*` / `mode` / `braveApiKey` / `customInstructions`
+- Cloudflare 배포에서 로컬 LLM(`127.0.0.1`)은 도달 불가

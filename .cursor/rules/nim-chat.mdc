@@ -5,11 +5,11 @@ alwaysApply: true
 
 # NIM-Chat (니무)
 
-- 모바일 NVIDIA NIM 채팅 앱. Worker(`src/worker.js`) + static(`public/`).
-- 에이전트는 **2단계**(계획→실행). 계획 단계에서는 답·도구 호출 금지.
+- 모바일 멀티 LLM 채팅 앱(기본 NVIDIA NIM). Worker(`src/worker.js`) + static(`public/`).
+- 에이전트는 **2단계**(계획→실행). 계획 단계에서는 답·도구 호출 금지. 도구는 순차 실행(`parallel_tool_calls: false`).
 - AI 이름 **니무**: 한국어·존댓말. 채팅 프롬프트는 `public/app.js`의 `buildChatSystemPrompt`, 에이전트는 `rules/*` + `src/agent/prompts.js`.
-- 채팅: `POST /api/chat`. 에이전트: `POST /api/agent` (Worker 툴 루프, Brave/MCP). stdio MCP·Durable Objects 없음.
-- 설정은 `localStorage` (`nvidia-chat-settings-v1`). 빈 키 필드로 저장해도 기존 키 유지.
+- 채팅: `POST /api/chat`. 에이전트: `POST /api/agent`. polish: `POST /api/polish`. 헤더 `X-Api-Base`로 커스텀 업스트림. stdio MCP·Durable Objects 없음.
+- 설정은 `localStorage` (`nvidia-chat-settings-v1`, `provider`/`providers`). 빈 키 필드로 저장해도 기존 키 유지.
 - rules/skills MD 추가·변경 시 `src/agent/bundled-content.js` import도 갱신. `wrangler.toml` Text 규칙 유지.
 - 커밋 메시지는 한국어. 사용자가 요청할 때만 커밋/푸시.
 - 상세 인수인계: 루트 `AGENTS.md`.

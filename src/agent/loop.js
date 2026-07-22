@@ -8,7 +8,13 @@ import {
   formatPlanForDisplay,
 } from "./prompts.js";
 import { createToolRegistry } from "./tools/registry.js";
-import { nimChatJson, nimChatCompletions, parseNimSseContent } from "../lib/nim.js";
+import {
+  nimChatJson,
+  nimChatCompletions,
+  parseNimSseContent,
+  resolveChatEndpoint,
+} from "../lib/nim.js";
+import { needsReplyPolish, polishReplyText } from "../lib/text-guard.js";
 
 /**
  * @param {string} raw
@@ -42,11 +48,48 @@ function assertNotAborted(signal) {
 }
 
 /**
+ * 최종 답변을 외국 문자 점검 후 클라이언트에 전달합니다.
+ * @param {string} text
+ * @param {object} ctx
+ */
+async function deliverReplyText(text, { apiKey, model, endpoint, signal, emit }) {
+  let finalText = String(text || "").trim();
+  if (!finalText) return "";
+
+  const polishEnabled = agentConfig.polishReply !== false;
+  if (polishEnabled && needsReplyPolish(finalText)) {
+    emit("phase", { phase: "polish", message: "문장 표현 점검 중…" });
+    emit("status", {
+      message: "의도되지 않은 외국어 표현 점검·다듬는 중…",
+      phase: "polish",
+    });
+    const result = await polishReplyText({
+      text: finalText,
+      apiKey,
+      model,
+      endpoint,
+      signal,
+    });
+    if (result.polished) {
+      const hint = result.issues?.length
+        ? ` (${result.issues.map((i) => i.label).join(", ")})`
+        : "";
+      finalText = result.text;
+      emit("status", { message: `문장 다듬기 완료${hint}`, phase: "polish" });
+    }
+  }
+
+  emit("text", { delta: finalText, phase: "execute" });
+  return finalText;
+}
+
+/**
  * Phase 1: plan only (no tools, no user-facing answer).
  */
 async function runPlannerPhase({
   apiKey,
   model,
+  endpoint,
   historyMessages,
   userText,
   customInstructions,
@@ -76,6 +119,7 @@ async function runPlannerPhase({
   const json = await nimChatJson({
     apiKey,
     signal,
+    endpoint,
     body: {
       model,
       messages: plannerMessages,
@@ -106,6 +150,7 @@ async function runPlannerPhase({
 async function runExecutorPhase({
   apiKey,
   model,
+  endpoint,
   historyMessages,
   userText,
   customInstructions,
@@ -145,11 +190,14 @@ async function runExecutorPhase({
     const json = await nimChatJson({
       apiKey,
       signal,
+      endpoint,
       body: {
         model,
         messages: conversation,
         tools,
         tool_choice: "auto",
+        // 일부 NIM 모델은 병렬 tool call을 거부함 (400 single tool-calls)
+        parallel_tool_calls: false,
         temperature: agentConfig.temperature ?? 0.7,
         top_p: agentConfig.top_p ?? 0.9,
         max_tokens: agentConfig.max_tokens ?? 2048,
@@ -162,7 +210,15 @@ async function runExecutorPhase({
       throw new Error("NIM returned no message");
     }
 
-    const toolCalls = getToolCalls(message);
+    let toolCalls = getToolCalls(message);
+    // 방어: 병렬 호출이 오면 첫 개만 실행하고 나머지는 다음 스텝에 맡김
+    if (toolCalls.length > 1) {
+      emit("status", {
+        message: `도구 ${toolCalls.length}개 요청 → 1개씩 순차 실행`,
+        phase: "execute",
+      });
+      toolCalls = toolCalls.slice(0, 1);
+    }
     if (toolCalls.length > 0) {
       conversation.push({
         role: "assistant",
@@ -173,7 +229,8 @@ async function runExecutorPhase({
       for (const call of toolCalls) {
         const name = call.function?.name || call.name || "unknown";
         const argStr = call.function?.arguments ?? call.arguments ?? "{}";
-        const args = typeof argStr === "string" ? safeJsonParse(argStr) : argStr || {};
+        const args =
+          typeof argStr === "string" ? safeJsonParse(argStr) : argStr || {};
         const id = call.id || `call_${step}_${name}`;
 
         emit("tool_start", { id, name, args, step, phase: "execute" });
@@ -202,14 +259,20 @@ async function runExecutorPhase({
 
     const content = message.content || "";
     if (content) {
-      emit("text", { delta: content, phase: "execute" });
-      finalText = content;
-      conversation.push({ role: "assistant", content });
+      finalText = await deliverReplyText(content, {
+        apiKey,
+        model,
+        endpoint,
+        signal,
+        emit,
+      });
+      conversation.push({ role: "assistant", content: finalText });
     } else {
       emit("status", { message: "2/2 답변 작성 중…", phase: "execute" });
       const streamRes = await nimChatCompletions({
         apiKey,
         signal,
+        endpoint,
         body: {
           model,
           messages: conversation,
@@ -221,25 +284,36 @@ async function runExecutorPhase({
       });
       if (!streamRes.ok) {
         const errText = await streamRes.text();
-        throw new Error(`NIM stream failed (${streamRes.status}): ${errText.slice(0, 400)}`);
+        throw new Error(
+          `NIM stream failed (${streamRes.status}): ${errText.slice(0, 400)}`
+        );
       }
       let full = "";
       for await (const delta of parseNimSseContent(streamRes.body)) {
         full += delta;
-        emit("text", { delta, phase: "execute" });
       }
-      finalText = full;
-      conversation.push({ role: "assistant", content: full });
+      finalText = await deliverReplyText(full, {
+        apiKey,
+        model,
+        endpoint,
+        signal,
+        emit,
+      });
+      conversation.push({ role: "assistant", content: finalText });
     }
 
     emit("status", { message: "완료", phase: "execute" });
     return { finalText, steps: step };
   }
 
-  emit("status", { message: "도구 단계 상한 도달 — 최종 답변 요청", phase: "execute" });
+  emit("status", {
+    message: "도구 단계 상한 도달 — 최종 답변 요청",
+    phase: "execute",
+  });
   const wrap = await nimChatJson({
     apiKey,
     signal,
+    endpoint,
     body: {
       model,
       messages: [
@@ -257,14 +331,23 @@ async function runExecutorPhase({
     },
   });
   const wrapText = wrap.choices?.[0]?.message?.content || "";
-  if (wrapText) emit("text", { delta: wrapText, phase: "execute" });
-  return { finalText: wrapText, steps: maxSteps };
+  const delivered = wrapText
+    ? await deliverReplyText(wrapText, {
+        apiKey,
+        model,
+        endpoint,
+        signal,
+        emit,
+      })
+    : "";
+  return { finalText: delivered, steps: maxSteps };
 }
 
 /**
  * Two-phase agent: (1) plan without answering, (2) execute + answer.
  * @param {object} opts
  * @param {string} opts.apiKey
+ * @param {string} [opts.baseUrl]
  * @param {string} opts.model
  * @param {Array<object>} opts.messages
  * @param {string} [opts.braveApiKey]
@@ -275,6 +358,7 @@ async function runExecutorPhase({
  */
 export async function runAgentLoop({
   apiKey,
+  baseUrl = "",
   model,
   messages,
   braveApiKey,
@@ -283,8 +367,10 @@ export async function runAgentLoop({
   emit,
   signal,
 }) {
+  const endpoint = resolveChatEndpoint(baseUrl);
+  const isCustomProvider = Boolean(String(baseUrl || "").trim());
   const toolModels = agentConfig.toolModels || [];
-  if (toolModels.length && !toolModels.includes(model)) {
+  if (!isCustomProvider && toolModels.length && !toolModels.includes(model)) {
     throw new Error(
       `Model "${model}" is not enabled for agent tool use. Choose one of: ${toolModels.join(", ")}`
     );
@@ -310,6 +396,7 @@ export async function runAgentLoop({
     const { display: planDisplay } = await runPlannerPhase({
       apiKey,
       model,
+      endpoint,
       historyMessages,
       userText,
       customInstructions,
@@ -322,6 +409,7 @@ export async function runAgentLoop({
     return await runExecutorPhase({
       apiKey,
       model,
+      endpoint,
       historyMessages,
       userText,
       customInstructions,
